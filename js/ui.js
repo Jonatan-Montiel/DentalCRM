@@ -80,7 +80,7 @@ export function campoHtml(c, valor) {
 }
 
 export function formHtml(campos, valores = {}) {
-  return `<form class="form-grid" onsubmit="return false">${campos.map(c => campoHtml(c, valores[c.clave] ?? valores.custom?.[c.clave])).join('')}</form>`;
+  return `<form class="form-grid" onsubmit="return false">${campos.map(c => campoHtml(c, valores[c.clave])).join('')}</form>`;
 }
 
 export function leerForm(raiz, campos) {
@@ -95,17 +95,6 @@ export function leerForm(raiz, campos) {
     out[c.clave] = v;
   }
   return out;
-}
-
-// Campos personalizados definidos en Configuración
-export async function camposPersonalizados(entidad) {
-  const todos = await db.getConfig('campos_personalizados', []);
-  return todos.filter(c => c.entidad === entidad).map(c => ({ ...c, custom: true, opciones: c.opciones ? String(c.opciones).split(',').map(s => s.trim()) : [] }));
-}
-export function separarCustom(datos, campos) {
-  const custom = {}; const base = { ...datos };
-  for (const c of campos) if (c.custom) { custom[c.clave] = base[c.clave]; delete base[c.clave]; }
-  return { base, custom };
 }
 
 export function vacio(texto, accion = '') {

@@ -85,7 +85,6 @@ input[type=checkbox] { width: auto; }
 textarea { resize: vertical; }
 input:focus, select:focus, textarea:focus { outline: 2px solid var(--pri-suave); border-color: var(--pri); }
 .buscador { min-width: 220px; }
-textarea.codigo { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12.5px; line-height: 1.5; background: #0f1b1d; color: #d7e8e8; border-color: #0f1b1d; tab-size: 2; }
 
 /* Modal */
 .modal-fondo { position: fixed; inset: 0; background: rgba(10,25,28,.45); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
@@ -162,9 +161,6 @@ textarea.codigo { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-s
 .diente svg polygon, .diente svg rect { stroke: #8a959c; stroke-width: 1; }
 .diente svg .cara:hover { fill-opacity: .6; }
 
-/* Script editor */
-.script-item { border: 1px solid var(--borde); border-radius: 10px; padding: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-.logs { font-family: ui-monospace, monospace; font-size: 12px; background: #0f1b1d; color: #cfe3e3; border-radius: 8px; padding: 10px; max-height: 240px; overflow: auto; white-space: pre-wrap; }
 .barra { height: 8px; border-radius: 999px; background: #eef1f3; overflow: hidden; }
 .barra > div { height: 100%; background: var(--pri); }
 .grafica { display: flex; align-items: flex-end; gap: 10px; height: 170px; padding-top: 10px; }

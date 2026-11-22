@@ -1,6 +1,6 @@
 // Capa de datos: misma interfaz para modo demo (navegador) y Supabase.
-// Toda escritura pasa por el motor de scripts (triggers) y la bitácora.
-import { runTriggers } from './scripts.js';
+// Toda escritura pasa por las reglas de negocio (js/reglas.js) y la bitácora.
+import { runTriggers } from './reglas.js';
 
 export const ENTIDADES = [
   'pacientes', 'prospectos', 'citas', 'tratamientos', 'pagos',

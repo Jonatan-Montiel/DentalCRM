@@ -1,5 +1,5 @@
 import { db } from '../db.js';
-import { esc, edad, nombreCompleto, fecha, fechaHora, dinero, chip, vacio, modal, formHtml, leerForm, toast, isoDia, camposPersonalizados, confirmar, puede, $ } from '../ui.js';
+import { esc, edad, nombreCompleto, fecha, fechaHora, dinero, chip, vacio, modal, formHtml, leerForm, toast, isoDia, confirmar, puede, $ } from '../ui.js';
 import { ESTADOS_CITA, ETAPAS_TRATAMIENTO, etiqueta, colorDe } from '../catalogos.js';
 import { catalogos, editarPaciente, editarCita, editarPago, editarTratamiento, linkWhatsApp, enviarRecordatorio } from './comun.js';
 import { renderOdontograma } from './odontograma.js';
@@ -14,7 +14,6 @@ export async function render(el, [id]) {
     db.list('citas', { paciente_id: id }), db.list('tratamientos', { paciente_id: id }),
     db.list('pagos', { paciente_id: id }), db.list('notas_clinicas', { paciente_id: id }), db.list('bitacora', { registro_id: id })
   ]);
-  const custom = await camposPersonalizados('pacientes');
   const clinico = puede('admin', 'doctor');
   const totalTrat = trats.filter(t => !['presupuesto', 'rechazado'].includes(t.etapa)).reduce((s, t) => s + Number(t.total || 0), 0);
   const totalPag = pagos.reduce((s, x) => s + Number(x.monto), 0);
@@ -46,8 +45,7 @@ export async function render(el, [id]) {
           <div class="kpi"><small>Pagado</small><b>${dinero(totalPag)}</b></div>
           <div class="kpi"><small>Saldo</small><b style="color:${totalTrat - totalPag > 0 ? 'var(--rojo)' : 'inherit'}">${dinero(Math.max(totalTrat - totalPag, 0))}</b></div></div>
         <div class="tarjeta"><h2>Datos generales</h2><div class="datos-lista">
-          ${[['Fecha de nacimiento', fecha(p.fecha_nac)], ['Sexo', { F: 'Femenino', M: 'Masculino', O: 'Otro' }[p.sexo]], ['Correo', p.email], ['Dirección', p.direccion], ['Tutor', p.tutor], ['Aseguradora', p.aseguradora], ['Origen', p.origen], ['Paciente desde', fecha(p.creado)],
-            ...custom.map(f => [f.etiqueta, f.tipo === 'checkbox' ? (p.custom?.[f.clave] ? 'Sí' : 'No') : p.custom?.[f.clave]])]
+          ${[['Fecha de nacimiento', fecha(p.fecha_nac)], ['Sexo', { F: 'Femenino', M: 'Masculino', O: 'Otro' }[p.sexo]], ['Correo', p.email], ['Dirección', p.direccion], ['Tutor', p.tutor], ['Aseguradora', p.aseguradora], ['Origen', p.origen], ['Paciente desde', fecha(p.creado)]]
             .map(([k, v]) => `<div><small>${esc(k)}</small>${esc(v || '—')}</div>`).join('')}
         </div>${clinico && p.antecedentes ? `<h3 style="margin-top:16px">Antecedentes médicos</h3><p style="white-space:pre-wrap">${esc(p.antecedentes)}</p>` : ''}</div>`;
     },

@@ -1,46 +1,5 @@
-// Datos de ejemplo para el modo demo. En Supabase se cargan con supabase/seed.sql.
+// Datos de ejemplo para el modo demo. En Supabase solo se carga la configuración inicial.
 import { db } from './db.js';
-
-const SCRIPTS_EJEMPLO = [
-  {
-    id: 's1', nombre: 'Horario de la clínica', entidad: 'citas', evento: 'beforeInsert', activo: true,
-    codigo: `// Bloquea citas fuera del horario configurado (similar a una validación en Groovy)
-const clinica = await api.config('clinica');
-const h = new Date(registro.inicio).getHours();
-if (h < (clinica?.hora_apertura ?? 8) || h >= (clinica?.hora_cierre ?? 20)) {
-  api.error('La cita está fuera del horario de la clínica');
-}`
-  },
-  {
-    id: 's2', nombre: 'Asignar prospecto (round-robin)', entidad: 'prospectos', evento: 'beforeInsert', activo: true,
-    codigo: `// Si el prospecto no trae doctor, se asigna al que tenga menos prospectos abiertos
-if (!registro.doctor_id) {
-  const doctores = (await api.buscar('doctores')).filter(d => d.activo !== false);
-  const abiertos = (await api.buscar('prospectos')).filter(p => !['convertido','perdido'].includes(p.etapa));
-  doctores.sort((a, b) => abiertos.filter(p => p.doctor_id === a.id).length - abiertos.filter(p => p.doctor_id === b.id).length);
-  if (doctores[0]) { registro.doctor_id = doctores[0].id; api.log('Asignado a', doctores[0].nombre); }
-}`
-  },
-  {
-    id: 's3', nombre: 'Tratamiento liquidado', entidad: 'pagos', evento: 'afterInsert', activo: true,
-    codigo: `// Cuando los pagos cubren el total del tratamiento, se marca como liquidado
-if (!registro.tratamiento_id) return;
-const t = await api.obtener('tratamientos', registro.tratamiento_id);
-const pagos = await api.buscar('pagos', { tratamiento_id: t.id });
-const pagado = pagos.reduce((s, p) => s + Number(p.monto || 0), 0);
-if (pagado >= Number(t.total || 0) && !t.liquidado) {
-  await api.actualizar('tratamientos', t.id, { liquidado: true });
-  api.log('Tratamiento liquidado:', t.titulo);
-}`
-  },
-  {
-    id: 's4', nombre: 'Aviso a sistema externo (ejemplo)', entidad: 'pacientes', evento: 'afterInsert', activo: false,
-    codigo: `// Ejemplo de integración saliente: envía el paciente nuevo a otro sistema
-await api.webhook('https://ejemplo.com/api/pacientes', {
-  id: registro.id, nombre: registro.nombre + ' ' + registro.apellidos, telefono: registro.telefono
-});`
-  }
-];
 
 const PROCS = [
     ['CON', 'Consulta y valoración', 400, 30, 'General'], ['LIM', 'Limpieza dental (profilaxis)', 800, 45, 'Preventiva'],
@@ -58,13 +17,6 @@ export async function sembrarDemo({ ejemplos = true } = {}) {
     hora_apertura: 9, hora_cierre: 20, duracion_cita: 30,
     plantilla_recordatorio: 'Hola {paciente} 👋, te recordamos tu cita en {clinica} el {fecha} a las {hora} con {doctor}. Responde SÍ para confirmar.'
   });
-  await db.setConfig('scripts', SCRIPTS_EJEMPLO);
-  await db.setConfig('webhooks', []);
-  await db.setConfig('campos_personalizados', [
-    { entidad: 'pacientes', clave: 'ocupacion', etiqueta: 'Ocupación', tipo: 'text' },
-    { entidad: 'pacientes', clave: 'requiere_factura', etiqueta: 'Requiere factura', tipo: 'checkbox' },
-    { entidad: 'pacientes', clave: 'rfc', etiqueta: 'RFC', tipo: 'text' }
-  ]);
   if (!ejemplos) {
     for (const [clave, nombre, precio, duracion_min, categoria] of PROCS) await db.create('procedimientos', { clave, nombre, precio, duracion_min, categoria }, s);
     await db.create('sillones', { nombre: 'Sillón 1', activo: true }, s);
@@ -93,7 +45,7 @@ export async function sembrarDemo({ ejemplos = true } = {}) {
   ];
   const pacientes = [];
   for (const [nombre, apellidos, fecha_nac, sexo, telefono, origen] of pac) {
-    pacientes.push(await db.create('pacientes', { nombre, apellidos, fecha_nac, sexo, telefono, email: '', origen, alergias: nombre === 'Luis' ? 'Penicilina' : '', antecedentes: '', custom: {} }, s));
+    pacientes.push(await db.create('pacientes', { nombre, apellidos, fecha_nac, sexo, telefono, email: '', origen, alergias: nombre === 'Luis' ? 'Penicilina' : '', antecedentes: '' }, s));
   }
   pacientes[2].tutor = 'Laura Ramírez (mamá)'; await db.update('pacientes', pacientes[2].id, { tutor: 'Laura Ramírez (mamá)' }, s);
 

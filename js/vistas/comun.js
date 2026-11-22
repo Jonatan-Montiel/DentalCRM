@@ -1,6 +1,6 @@
 // Formularios y utilerías compartidas entre vistas.
 import { db } from '../db.js';
-import { modal, formHtml, leerForm, toast, esc, dinero, camposPersonalizados, separarCustom, nombreCompleto, fecha, hora, isoDia, confirmar, $ } from '../ui.js';
+import { modal, formHtml, leerForm, toast, esc, dinero, nombreCompleto, fecha, hora, isoDia, confirmar, $ } from '../ui.js';
 import { ETAPAS_PROSPECTO, ETAPAS_TRATAMIENTO, ESTADOS_CITA, ORIGENES, METODOS_PAGO } from '../catalogos.js';
 
 export async function catalogos() {
@@ -47,7 +47,6 @@ export function descargarIcs(cita, cat) {
 
 // ---------- Paciente ----------
 export async function editarPaciente(p = null) {
-  const custom = await camposPersonalizados('pacientes');
   const campos = [
     { clave: 'nombre', etiqueta: 'Nombre(s)', requerido: true },
     { clave: 'apellidos', etiqueta: 'Apellidos', requerido: true },
@@ -60,15 +59,13 @@ export async function editarPaciente(p = null) {
     { clave: 'aseguradora', etiqueta: 'Aseguradora' },
     { clave: 'origen', etiqueta: '¿Cómo nos conoció?', tipo: 'select', opciones: ORIGENES },
     { clave: 'alergias', etiqueta: 'Alergias', placeholder: 'Ej. penicilina, látex' },
-    { clave: 'antecedentes', etiqueta: 'Antecedentes médicos', tipo: 'textarea', ancho: 'completo', placeholder: 'Diabetes, hipertensión, embarazo, medicamentos…' },
-    ...custom
+    { clave: 'antecedentes', etiqueta: 'Antecedentes médicos', tipo: 'textarea', ancho: 'completo', placeholder: 'Diabetes, hipertensión, embarazo, medicamentos…' }
   ];
   return new Promise(res => modal({
     titulo: p ? 'Editar paciente' : 'Nuevo paciente', ancho: 'ancho', cuerpo: formHtml(campos, p || {}),
     acciones: [{ texto: 'Cancelar', onClick: () => res(null) }, {
       texto: 'Guardar', clase: 'primario', onClick: async (m) => {
-        const { base, custom: c } = separarCustom(leerForm(m, campos), campos);
-        const datos = { ...base, custom: { ...(p?.custom || {}), ...c } };
+        const datos = leerForm(m, campos);
         const r = p ? await db.update('pacientes', p.id, datos) : await db.create('pacientes', datos);
         toast('Paciente guardado'); res(r);
       }
@@ -161,7 +158,6 @@ export async function enviarRecordatorio(cita, cat) {
 // ---------- Prospecto ----------
 export async function editarProspecto(pr = null) {
   const cat = await catalogos();
-  const custom = await camposPersonalizados('prospectos');
   const campos = [
     { clave: 'nombre', etiqueta: 'Nombre', requerido: true, ancho: 'completo' },
     { clave: 'telefono', etiqueta: 'Teléfono', tipo: 'tel', requerido: true },
@@ -171,8 +167,7 @@ export async function editarProspecto(pr = null) {
     { clave: 'etapa', etiqueta: 'Etapa', tipo: 'select', requerido: true, opciones: ETAPAS_PROSPECTO, defecto: 'nuevo' },
     { clave: 'doctor_id', etiqueta: 'Asignado a', tipo: 'select', opciones: opsDe(cat.doctores) },
     { clave: 'proximo_contacto', etiqueta: 'Próximo contacto', tipo: 'date' },
-    { clave: 'notas', etiqueta: 'Notas', tipo: 'textarea', ancho: 'completo' },
-    ...custom
+    { clave: 'notas', etiqueta: 'Notas', tipo: 'textarea', ancho: 'completo' }
   ];
   return new Promise(res => modal({
     titulo: pr ? 'Prospecto' : 'Nuevo prospecto', cuerpo: formHtml(campos, pr || {}),
@@ -181,8 +176,7 @@ export async function editarProspecto(pr = null) {
       { texto: 'Cancelar', onClick: () => res(null) },
       {
         texto: 'Guardar', clase: 'primario', onClick: async (m) => {
-          const { base, custom: c } = separarCustom(leerForm(m, campos), campos);
-          const datos = { ...base, custom: { ...(pr?.custom || {}), ...c } };
+          const datos = leerForm(m, campos);
           const r = pr ? await db.update('prospectos', pr.id, datos) : await db.create('prospectos', datos);
           toast('Prospecto guardado'); res(r);
         }
@@ -193,7 +187,7 @@ export async function editarProspecto(pr = null) {
 // Convierte prospecto -> paciente (como "Convert Lead" en CX Sales)
 export async function convertirProspecto(pr) {
   const [nombre, ...resto] = String(pr.nombre).trim().split(/\s+/);
-  const p = await db.create('pacientes', { nombre, apellidos: resto.join(' '), telefono: pr.telefono, email: pr.email, origen: pr.origen, prospecto_id: pr.id, custom: {} });
+  const p = await db.create('pacientes', { nombre, apellidos: resto.join(' '), telefono: pr.telefono, email: pr.email, origen: pr.origen, prospecto_id: pr.id });
   await db.update('prospectos', pr.id, { etapa: 'convertido', paciente_id: p.id });
   toast('Prospecto convertido en paciente');
   return p;

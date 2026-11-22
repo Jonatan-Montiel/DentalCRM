@@ -14,7 +14,7 @@ CRM para clínica dental (1 sucursal, hasta 5 doctores y 5 sillones), inspirado 
 | Expediente | — | Notas SOAP con signos vitales (solo doctores y admin) |
 | Odontograma | — | FDI adulto/infantil, condiciones por cara y por diente, notas por pieza |
 | Pagos | — | Abonos por tratamiento, métodos, CFDI, exportación CSV |
-| Configuración | Application Composer | Campos personalizados, scripts/triggers en JS, webhooks, usuarios y roles, bitácora |
+| Configuración | Setup | Clínica, doctores, sillones, catálogo de precios, usuarios y roles, respaldo, bitácora |
 
 Roles: **Administrador** (todo), **Doctor** (sin pagos ni configuración) y **Recepción** (sin expediente clínico ni configuración).
 
@@ -38,43 +38,28 @@ PIN demo: `1234` administrador · `0000` recepción · `1111` doctor.
 2. **SQL Editor** → pega y ejecuta `supabase/schema.sql` (antes cambia el correo del administrador al final).
 3. **Authentication → Users → Add user**: crea el usuario con ese mismo correo y una contraseña.
 4. En **Authentication → URL Configuration** agrega la URL de tu GitHub Pages.
-5. En la app: *Configuración → Integraciones* → pega la **Project URL** y la **anon key** (Settings → API) → Conectar.
+5. En la app: *Configuración → Datos y conexión* → pega la **Project URL** y la **anon key** (Settings → API) → Conectar.
 6. Entra con tu correo. La primera vez se carga la configuración inicial y el catálogo de procedimientos.
 7. Para cada persona del equipo: créala en Authentication y luego en *Configuración → Usuarios* con el mismo correo y su rol.
 
 La seguridad vive en la base de datos (Row Level Security): aunque alguien tenga la anon key, sin un usuario válido no puede leer nada,
 y recepción no puede leer expedientes ni odontogramas. También hay restricciones que impiden empalmar citas del mismo doctor o sillón.
 
-## Extensibilidad (estilo Application Composer)
+## Personalización e integraciones
 
-### Campos personalizados
-*Configuración → Campos personalizados*. Se guardan en la columna `custom` (jsonb) y aparecen solos en formularios y fichas.
+Los cambios se hacen en el código, no desde la app, para mantener el sistema limpio y versionado en Git:
 
-### Scripts / triggers
-*Configuración → Scripts*. Equivalen a los *Object Triggers* de Groovy, pero en JavaScript (se permite `await`).
+- **Reglas de negocio** (equivalente a los triggers en Groovy): `js/reglas.js`, por objeto y evento (`beforeInsert`, `afterInsert`, `beforeUpdate`, `afterUpdate`, `beforeDelete`).
+  Reglas actuales: horario de la clínica en citas, asignación round-robin de prospectos y tratamiento liquidado al completar pagos.
+- **Campos nuevos:** se agregan al formulario (`js/vistas/comun.js`), a la ficha y como columna en `supabase/schema.sql`.
+- **Integraciones:** como Edge Functions en `supabase/functions/` o como reglas `after*` en `js/reglas.js`.
+- **API REST entrante:** cada tabla tiene su endpoint automático en `https://TU-PROYECTO.supabase.co/rest/v1/<tabla>` (protegido por RLS).
 
-Eventos: `beforeInsert`, `afterInsert`, `beforeUpdate`, `afterUpdate` y `beforeDelete` sobre pacientes, prospectos, citas, tratamientos, pagos, notas clínicas y odontogramas.
+### Integraciones incluidas
 
-```js
-// citas.beforeInsert: no agendar pacientes con saldo vencido
-const trats = await api.buscar('tratamientos', { paciente_id: registro.paciente_id });
-const pagos = await api.buscar('pagos', { paciente_id: registro.paciente_id });
-const deuda = trats.reduce((s, t) => s + Number(t.total), 0) - pagos.reduce((s, p) => s + Number(p.monto), 0);
-if (deuda > 10000) api.error(`El paciente tiene un saldo de $${deuda}. Autoriza con administración.`);
-```
-
-API disponible: `registro`, `anterior`, `api.error()`, `api.log()`, `api.buscar()`, `api.obtener()`, `api.crear()`,
-`api.actualizar()`, `api.config()`, `api.webhook()`, `api.usuario` y `api.hoy()`. El editor incluye un botón **▶ Probar**.
-
-> En esta versión los scripts se ejecutan en el navegador, igual que la lógica de UI de VBS. Las reglas críticas (empalmes, permisos, límites) también están en la base de datos.
-
-## Integraciones
-
-- **API REST entrante:** cada tabla tiene su endpoint automático en `https://TU-PROYECTO.supabase.co/rest/v1/<tabla>`.
-- **Webhooks salientes:** *Configuración → Integraciones*, por evento (`pagos.afterInsert`, `*`, …). Envía POST JSON con `{ evento, fecha, registro, anterior }`.
-- **Edge Function `captura-prospecto`:** endpoint público para formularios web, Facebook Lead Ads (vía Zapier, Make o n8n), etc. Evita duplicados y asigna doctor.
-- **Edge Function `recordatorios-whatsapp`:** recordatorios automáticos un día antes con WhatsApp Cloud API (plantilla aprobada por Meta) y programación con `pg_cron`.
-- **Facturación CFDI 4.0:** webhook `pagos.afterInsert` hacia tu PAC (Facturama, FacturAPI, etc.); la clave SAT de cada procedimiento se configura en el catálogo.
+- **`captura-prospecto`:** endpoint público para formularios web, Facebook Lead Ads (vía Zapier, Make o n8n), etc. Evita duplicados y asigna doctor.
+- **`recordatorios-whatsapp`:** recordatorios automáticos un día antes con WhatsApp Cloud API (plantilla aprobada por Meta) y programación con `pg_cron`.
+- **WhatsApp manual:** botón de recordatorio con un toque (wa.me).
 - **Calendario:** exportación `.ics` desde cada cita.
 
 ```bash
@@ -94,7 +79,7 @@ css/app.css
 js/
   app.js          login, layout, router y roles
   db.js           capa de datos (demo/localStorage y Supabase) + bitácora
-  scripts.js      motor de scripts/triggers y webhooks
+  reglas.js       reglas de negocio (triggers) por objeto y evento
   ui.js           formularios, modales y formatos
   catalogos.js    etapas, estados y piezas dentales
   seed.js         datos de ejemplo

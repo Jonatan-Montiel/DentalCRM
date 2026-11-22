@@ -39,7 +39,7 @@ create table if not exists pacientes (
   nombre text not null, apellidos text, fecha_nac date, sexo text,
   telefono text, email text, direccion text, tutor text, aseguradora text,
   origen text, alergias text, antecedentes text,
-  prospecto_id text, custom jsonb default '{}'::jsonb
+  prospecto_id text
 );
 create index if not exists pacientes_telefono_idx on pacientes (telefono);
 
@@ -50,7 +50,7 @@ create table if not exists prospectos (
   etapa text not null default 'nuevo' check (etapa in ('nuevo','contactado','cita_agendada','convertido','perdido')),
   doctor_id text references doctores(id) on delete set null,
   paciente_id text references pacientes(id) on delete set null,
-  proximo_contacto date, notas text, custom jsonb default '{}'::jsonb
+  proximo_contacto date, notas text
 );
 
 create table if not exists citas (
@@ -168,7 +168,7 @@ drop policy if exists "escritura" on sillones;
 create policy "escritura" on sillones for all to authenticated using (rol_actual() = 'admin') with check (rol_actual() = 'admin');
 drop policy if exists "escritura" on procedimientos;
 create policy "escritura" on procedimientos for all to authenticated using (rol_actual() = 'admin') with check (rol_actual() = 'admin');
--- config: todos leen (scripts/campos); solo admin escribe
+-- config: todos leen; solo admin escribe
 drop policy if exists "escritura" on config;
 create policy "escritura" on config for all to authenticated using (rol_actual() = 'admin') with check (rol_actual() = 'admin');
 

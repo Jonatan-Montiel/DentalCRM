@@ -1,6 +1,7 @@
 // Formularios y utilerías compartidas entre vistas.
 import { db } from '../db.js';
 import { modal, formHtml, leerForm, toast, esc, dinero, nombreCompleto, fecha, hora, isoDia, confirmar, $ } from '../ui.js';
+import { descargar, imprimirHtml, abrirExterno } from '../nativo.js';
 import { ETAPAS_PROSPECTO, ETAPAS_TRATAMIENTO, ESTADOS_CITA, ORIGENES, METODOS_PAGO } from '../catalogos.js';
 
 export async function catalogos() {
@@ -40,9 +41,7 @@ export function descargarIcs(cita, cat) {
     `UID:${cita.id}@dentalcrm`, `DTSTAMP:${f(new Date())}`, `DTSTART:${f(cita.inicio)}`, `DTEND:${f(cita.fin)}`,
     `SUMMARY:Cita dental - ${nombreCompleto(p)}`, `DESCRIPTION:${(cita.motivo || '').replace(/\n/g, ' ')}`,
     'END:VEVENT', 'END:VCALENDAR'].join('\r\n');
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([ics], { type: 'text/calendar' }));
-  a.download = `cita-${isoDia(cita.inicio)}.ics`; a.click();
+  descargar(`cita-${isoDia(cita.inicio)}.ics`, ics, 'text/calendar');
 }
 
 // ---------- Paciente ----------
@@ -149,9 +148,7 @@ export async function enviarRecordatorio(cita, cat) {
   cat ||= await catalogos();
   const p = cat.P[cita.paciente_id];
   if (!p?.telefono) return toast('El paciente no tiene teléfono', 'error');
-  const a = document.createElement('a');
-  a.href = linkWhatsApp(p.telefono, await textoRecordatorio(cita, cat)); a.target = '_blank'; a.rel = 'noopener';
-  document.body.appendChild(a); a.click(); a.remove();
+  abrirExterno(linkWhatsApp(p.telefono, await textoRecordatorio(cita, cat)));
   await db.update('citas', cita.id, { recordatorio_enviado: new Date().toISOString() }, { sinTriggers: true });
 }
 
@@ -301,8 +298,7 @@ export async function imprimirPresupuesto(t, cat) {
   const clinica = await db.getConfig('clinica', {});
   const p = cat.P[t.paciente_id], d = cat.D[t.doctor_id];
   const sub = t.items.reduce((s, i) => s + i.precio * i.cantidad, 0);
-  const w = window.open('', '_blank');
-  w.document.write(`<html><head><title>Presupuesto</title><style>body{font-family:system-ui;padding:32px;color:#222}table{width:100%;border-collapse:collapse;margin-top:16px}td,th{border-bottom:1px solid #ddd;padding:8px;text-align:left}.r{text-align:right}h1{color:#0d7377;margin:0}</style></head><body>
+  await imprimirHtml(`<!DOCTYPE html><html><head><title>Presupuesto</title><style>body{font-family:system-ui;padding:32px;color:#222}table{width:100%;border-collapse:collapse;margin-top:16px}td,th{border-bottom:1px solid #ddd;padding:8px;text-align:left}.r{text-align:right}h1{color:#0d7377;margin:0}</style></head><body>
     <h1>${esc(clinica.nombre)}</h1><p>${esc(clinica.direccion || '')} · ${esc(clinica.telefono || '')}</p><hr>
     <h2>Presupuesto: ${esc(t.titulo)}</h2>
     <p><b>Paciente:</b> ${esc(nombreCompleto(p))}<br><b>Doctor:</b> ${esc(d?.nombre || '')}<br><b>Fecha:</b> ${fecha(t.creado || new Date())}</p>
@@ -312,6 +308,5 @@ export async function imprimirPresupuesto(t, cat) {
     ${t.descuento ? `<tr><td colspan="4" class="r">Descuento</td><td class="r">-${dinero(t.descuento)}</td></tr>` : ''}
     <tr><td colspan="4" class="r"><b>Total</b></td><td class="r"><b>${dinero(sub - (t.descuento || 0))}</b></td></tr></table>
     ${t.notas ? `<p><b>Notas:</b> ${esc(t.notas)}</p>` : ''}<p style="margin-top:40px;font-size:12px;color:#666">Presupuesto válido por 30 días. Los precios incluyen IVA cuando aplique.</p>
-    <script>print()<\/script></body></html>`);
-  w.document.close();
+    </body></html>`, `presupuesto-${t.titulo.replace(/\W+/g, '-').toLowerCase()}.html`);
 }

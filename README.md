@@ -1,6 +1,7 @@
 # 🦷 DentalCRM
 
 CRM para clínica dental (1 sucursal, hasta 5 doctores y 5 sillones), inspirado en Oracle CX Sales pero a escala de consultorio.
+Funciona en web (GitHub Pages), como PWA y como **app Android**.
 100 % JavaScript: el frontend se publica en **GitHub Pages** y el backend es **Supabase** (PostgreSQL + Auth + API REST + Edge Functions).
 
 ## Módulos
@@ -31,6 +32,34 @@ PIN demo: `1234` administrador · `0000` recepción · `1111` doctor.
 1. Sube el repo a GitHub.
 2. Settings → Pages → *Deploy from a branch* → `main` / `root`.
 3. Queda en `https://TU-USUARIO.github.io/NOMBRE-REPO/`.
+
+## App Android
+
+Hay dos formas de tenerla en el celular:
+
+**1. APK nativo (recomendado).** El proyecto Android está en `android/` (Capacitor 8). Cada vez que subes cambios a `main`, GitHub Actions
+(`.github/workflows/android.yml`) compila el APK en la nube, sin instalar Android Studio.
+
+1. Ve a **Releases → DentalCRM Android (última versión)** y descarga `DentalCRM.apk` desde el celular.
+2. Ábrelo y permite *Instalar apps de fuentes desconocidas* para tu navegador o el administrador de archivos.
+3. Las nuevas versiones se instalan encima de la anterior y conservan los datos.
+
+En Android, exportar CSV, el respaldo, el `.ics` y el presupuesto abren el menú de **Compartir** (Drive, WhatsApp, correo, etc.).
+El botón *atrás* cierra ventanas y regresa de pantalla. Los respaldos de Android están desactivados para no copiar datos de salud a la nube de Google.
+
+**Firma para Play Store (opcional).** Sin firma propia se genera un APK *debug*, que funciona para uso interno. Para publicarlo en Google Play:
+
+```bash
+keytool -genkey -v -keystore dentalcrm.keystore -alias dentalcrm -keyalg RSA -keysize 2048 -validity 10000
+base64 -w0 dentalcrm.keystore   # copia el resultado
+```
+
+Agrega en GitHub (*Settings → Secrets and variables → Actions*) los secretos `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
+`ANDROID_KEY_ALIAS` y `ANDROID_KEY_PASSWORD`. Guarda el keystore en un lugar seguro: sin él no podrás publicar actualizaciones.
+
+Compilar en tu computadora (requiere Android Studio): `npm install && npm run android:apk`, o `npm run android:sync && npm run android:open`.
+
+**2. PWA.** Abre la URL de GitHub Pages en Chrome para Android → menú ⋮ → *Agregar a la pantalla principal*. Se abre como app y funciona sin conexión en modo demo.
 
 ## Conectar Supabase (producción)
 
@@ -74,10 +103,15 @@ supabase secrets set WHATSAPP_TOKEN=... WHATSAPP_PHONE_ID=... WHATSAPP_TEMPLATE=
 ## Estructura
 
 ```
-index.html
+index.html, manifest.webmanifest, sw.js   app web + PWA
+icons/          íconos de la app
+android/        proyecto nativo Android (Capacitor)
+.github/        compilación automática del APK
+scripts/        build-web.mjs (copia la web a www/ para Capacitor)
 css/app.css
 js/
   app.js          login, layout, router y roles
+  nativo.js       puente con Android (compartir archivos, botón atrás)
   db.js           capa de datos (demo/localStorage y Supabase) + bitácora
   reglas.js       reglas de negocio (triggers) por objeto y evento
   ui.js           formularios, modales y formatos

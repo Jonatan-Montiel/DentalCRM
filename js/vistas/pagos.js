@@ -2,6 +2,7 @@ import { db } from '../db.js';
 import { esc, dinero, fecha, isoDia, nombreCompleto, chip, vacio, $ } from '../ui.js';
 import { METODOS_PAGO } from '../catalogos.js';
 import { catalogos, editarPago } from './comun.js';
+import { descargar } from '../nativo.js';
 
 let filtro = { desde: isoDia(new Date(new Date().getFullYear(), new Date().getMonth(), 1)), hasta: isoDia(), metodo: '' };
 
@@ -36,7 +37,6 @@ export async function render(el) {
     const filas = [['Fecha', 'Paciente', 'Concepto', 'Método', 'Referencia', 'Facturado', 'Monto'],
       ...lista.map(p => [p.fecha, nombreCompleto(cat.P[p.paciente_id]), T[p.tratamiento_id]?.titulo || p.notas || '', p.metodo, p.referencia || '', p.facturado ? 'Sí' : 'No', p.monto])];
     const csv = '﻿' + filas.map(f => f.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
-    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
-    a.download = `pagos_${filtro.desde}_${filtro.hasta}.csv`; a.click();
+    descargar(`pagos_${filtro.desde}_${filtro.hasta}.csv`, csv, 'text/csv');
   };
 }

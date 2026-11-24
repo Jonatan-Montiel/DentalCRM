@@ -1,0 +1,70 @@
+# Compila la app Android en la nube de GitHub cada vez que subes cambios a main.
+# El APK queda en: Actions > (última ejecución) > Artifacts, y en Releases > "android-latest".
+name: App Android
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    env:
+      KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Instalar dependencias y sincronizar
+        run: |
+          npm ci
+          npm run android:sync
+
+      - name: Preparar firma (si existen los secretos)
+        if: ${{ env.KEYSTORE_BASE64 != '' }}
+        run: echo "$KEYSTORE_BASE64" | base64 -d > android/app/release.keystore
+
+      - name: Compilar APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            ./gradlew assembleRelease
+            cp app/build/outputs/apk/release/app-release.apk ../DentalCRM.apk
+          else
+            ./gradlew assembleDebug
+            cp app/build/outputs/apk/debug/app-debug.apk ../DentalCRM.apk
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DentalCRM-apk
+          path: DentalCRM.apk
+
+      - name: Publicar en Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-latest
+          name: DentalCRM Android (última versión)
+          body: "APK generado automáticamente desde ${{ github.sha }}. Descárgalo en tu Android e instálalo."
+          files: DentalCRM.apk
+          prerelease: false
+          make_latest: true

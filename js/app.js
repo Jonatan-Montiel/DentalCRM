@@ -2,6 +2,7 @@ import { db } from './db.js';
 import { sembrarDemo } from './seed.js';
 import { esc, toast, $, puede } from './ui.js';
 import { ROLES, etiqueta } from './catalogos.js';
+import { iniciarNativo } from './nativo.js';
 
 const RUTAS = [
   { ruta: 'inicio', titulo: 'Inicio', ico: '📊', modulo: './vistas/dashboard.js', roles: ['admin', 'doctor', 'recepcion'] },
@@ -127,4 +128,5 @@ async function navegar() {
 export function recargarVista() { navegar(); }
 export { puede };
 
+iniciarNativo();
 iniciar();

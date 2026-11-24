@@ -196,3 +196,9 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--pri-suave);
   .ocultar-movil { display: none; }
   .agenda { max-height: calc(100vh - 230px); }
 }
+
+/* App Android / PWA: respetar barra de estado y barra de navegación del sistema */
+html.nativo main, html.nativo .login { padding-top: calc(16px + max(env(safe-area-inset-top, 0px), var(--safe-area-inset-top, 0px))); }
+html.nativo .lateral { padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--safe-area-inset-bottom, 0px)); }
+html.nativo body { -webkit-tap-highlight-color: transparent; user-select: none; }
+html.nativo input, html.nativo textarea { user-select: text; }

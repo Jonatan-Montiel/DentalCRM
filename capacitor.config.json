@@ -1,0 +1,8 @@
+{
+  "appId": "mx.dentalcrm.app",
+  "appName": "DentalCRM",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#0b2e30"
+  }
+}

@@ -1,6 +1,7 @@
 import { db } from '../db.js';
 import { esc, dinero, modal, formHtml, leerForm, toast, confirmar, fechaHora, chip, vacio, $ } from '../ui.js';
 import { ROLES, etiqueta } from '../catalogos.js';
+import { descargar } from '../nativo.js';
 
 let pestana = 'clinica';
 
@@ -98,8 +99,7 @@ async function datos(c) {
   $('#sbdes', c)?.addEventListener('click', () => { localStorage.removeItem('dentalcrm_conexion'); sessionStorage.removeItem('dentalcrm_usuario'); location.reload(); });
   $('#exp', c).onclick = async () => {
     const d = await db.exportAll();
-    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' }));
-    a.download = `dentalcrm_respaldo_${new Date().toISOString().slice(0, 10)}.json`; a.click();
+    descargar(`dentalcrm_respaldo_${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(d, null, 2), 'application/json');
   };
   $('#imp', c)?.addEventListener('change', async (e) => {
     const f = e.target.files[0]; if (!f) return;

@@ -1,0 +1,82 @@
+package mx.dentalcrm.app;
+
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.net.Uri;
+import android.util.Log;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/**
+ * Revisa si hay una versión nueva del APK (máximo cada 10 min) y ofrece actualizarla con un toque.
+ * Pregunta primero a Vercel, luego a GitHub Pages y al final a la API de GitHub (Releases).
+ */
+class Updater {
+    static final String T = "DCUpd";
+    static final String APK = "dentalcrm.apk";
+    static final String[] SRC = {MainActivity.MIRROR + "dl/version.json", MainActivity.BASE + "dl/version.json"};
+    static final String API = "https://api.github.com/repos/Jonatan-Montiel/DentalCRM/releases/tags/apk";
+    static volatile boolean showing = false;
+
+    static String get(String u) throws Exception {
+        HttpURLConnection h = (HttpURLConnection) new URL(u + (u.contains("?") ? "&" : "?") + "t=" + System.currentTimeMillis()).openConnection();
+        h.setConnectTimeout(8000); h.setReadTimeout(8000); h.setUseCaches(false);
+        h.setRequestProperty("Accept", "application/json"); h.setRequestProperty("User-Agent", "DentalCRM");
+        try {
+            if (h.getResponseCode() != 200) throw new Exception("HTTP " + h.getResponseCode());
+            StringBuilder sb = new StringBuilder();
+            try (BufferedReader r = new BufferedReader(new InputStreamReader(h.getInputStream(), "UTF-8"))) { String l; while ((l = r.readLine()) != null) sb.append(l); }
+            return sb.toString();
+        } finally { h.disconnect(); }
+    }
+
+    static void check(final MainActivity a) {
+        final SharedPreferences sp = a.getSharedPreferences("dc", Activity.MODE_PRIVATE);
+        if (System.currentTimeMillis() - sp.getLong("upd-check", 0) < 10 * 60 * 1000L) return;
+        sp.edit().putLong("upd-check", System.currentTimeMillis()).apply();
+        new Thread(() -> {
+            long remote = -1; String url = null;
+            for (String s : SRC) {
+                if (s.startsWith("dl/")) continue; // sin copia en Vercel todavía
+                try { JSONObject o = new JSONObject(get(s)); remote = o.getLong("vc"); url = s.replace("version.json", APK); break; }
+                catch (Exception e) { Log.i(T, "no respondió " + s + ": " + e); }
+            }
+            if (remote < 0) {
+                try {
+                    JSONObject o = new JSONObject(get(API));
+                    Matcher m = Pattern.compile("vc=(\\d+)").matcher(o.optString("body", ""));
+                    if (m.find()) remote = Long.parseLong(m.group(1));
+                    JSONArray as = o.optJSONArray("assets");
+                    for (int i = 0; as != null && i < as.length(); i++)
+                        if (APK.equals(as.getJSONObject(i).optString("name"))) url = as.getJSONObject(i).optString("browser_download_url");
+                } catch (Exception e) { Log.i(T, "no respondió la API: " + e); }
+            }
+            long local = a.vc();
+            Log.i(T, "remota=" + remote + " instalada=" + local);
+            if (remote < 0) { sp.edit().putLong("upd-check", 0).apply(); return; }
+            if (remote <= local || url == null) return;
+            final String dl = url; final long rv = remote;
+            a.runOnUiThread(() -> {
+                if (a.isFinishing() || showing) return;
+                showing = true;
+                new AlertDialog.Builder(a)
+                        .setTitle("Hay una versión nueva de DentalCRM")
+                        .setMessage("Versión " + rv + " (tienes la " + local + "). Se descarga y la instalas encima; no se borra ningún dato.")
+                        .setPositiveButton("Actualizar", (d, w) -> { try { a.startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(dl))); } catch (Exception ignored) { } })
+                        .setNegativeButton("Después", null)
+                        .setOnDismissListener(d -> showing = false)
+                        .show();
+            });
+        }).start();
+    }
+}

@@ -21,45 +21,39 @@ Roles: **Administrador** (todo), **Doctor** (sin pagos ni configuración) y **Re
 
 ## Probarlo (modo demo)
 
-Abre `index.html` con cualquier servidor estático (`npx serve .`) o publícalo en GitHub Pages.
+Abre `index.html` con cualquier servidor estático (`npx serve .`) o entra a la página de GitHub Pages.
 En el modo demo los datos se guardan **solo en el navegador** y trae datos de ejemplo.
 PIN demo: `1234` administrador · `0000` recepción · `1111` doctor.
 
 > ⚠️ No guardes datos reales de pacientes en modo demo. Para producción conecta Supabase.
 
-## Publicar en GitHub Pages
-
-1. Sube el repo a GitHub.
-2. Settings → Pages → *Deploy from a branch* → `main` / `root`.
-3. Queda en `https://TU-USUARIO.github.io/NOMBRE-REPO/`.
-
 ## App Android
 
-Hay dos formas de tenerla en el celular:
+El repo tiene **la página web y la app** (igual que *ale-meses*):
 
-**1. APK nativo (recomendado).** El proyecto Android está en `android/` (Capacitor 8). Cada vez que subes cambios a `main`, GitHub Actions
-(`.github/workflows/android.yml`) compila el APK en la nube, sin instalar Android Studio.
+- **Web:** la raíz del repo se publica en GitHub Pages → `https://jonatan-montiel.github.io/DentalCRM/`.
+- **App:** `android/` es una app nativa ligera (Java + WebView) que abre esa misma web.
+  - Los cambios a la web llegan a la app **sin reinstalar**.
+  - Si no hay internet, usa la copia de la web incluida en el APK.
+  - Compartir (CSV, respaldo, `.ics`), imprimir presupuestos (impresora o PDF), WhatsApp y el botón *atrás* son nativos.
+  - Avisa cuando hay una versión nueva del APK y se actualiza con un toque.
+  - Los respaldos de Android están desactivados para no copiar datos de salud a la nube de Google.
 
-1. Ve a **Releases → DentalCRM Android (última versión)** y descarga `DentalCRM.apk` desde el celular.
-2. Ábrelo y permite *Instalar apps de fuentes desconocidas* para tu navegador o el administrador de archivos.
-3. Las nuevas versiones se instalan encima de la anterior y conservan los datos.
+**Compilación automática** (`.github/workflows/apk.yml`): con cada push a `main`, GitHub compila y firma el APK, lo prueba en un emulador
+y lo publica en **Releases → DentalCRM (Android)** y en `dl/dentalcrm.apk` (con `dl/version.json`). En la pantalla de inicio de la web
+aparece el botón **📱 Descargar app Android**. El resultado de la prueba en emulador queda en la rama `apk-log`.
 
-En Android, exportar CSV, el respaldo, el `.ics` y el presupuesto abren el menú de **Compartir** (Drive, WhatsApp, correo, etc.).
-El botón *atrás* cierra ventanas y regresa de pantalla. Los respaldos de Android están desactivados para no copiar datos de salud a la nube de Google.
+**Configuración inicial (una sola vez):**
 
-**Firma para Play Store (opcional).** Sin firma propia se genera un APK *debug*, que funciona para uso interno. Para publicarlo en Google Play:
+1. *Settings → Pages* → **Deploy from a branch** → `main` / `/ (root)`.
+2. *Settings → Secrets and variables → Actions → New repository secret* → nombre `DC_SIGN`, con el valor `contraseña:keystore-en-base64`.
+   Es la llave de firma: guárdala en un lugar seguro, porque sin ella las actualizaciones no se instalan encima.
+3. *Actions → APK → Run workflow* (o cualquier push a `main`).
 
-```bash
-keytool -genkey -v -keystore dentalcrm.keystore -alias dentalcrm -keyalg RSA -keysize 2048 -validity 10000
-base64 -w0 dentalcrm.keystore   # copia el resultado
-```
+> En modo demo los datos se guardan por origen: la app en línea (GitHub Pages) y la copia sin conexión tienen datos separados.
+> Con Supabase todos ven la misma información.
 
-Agrega en GitHub (*Settings → Secrets and variables → Actions*) los secretos `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`,
-`ANDROID_KEY_ALIAS` y `ANDROID_KEY_PASSWORD`. Guarda el keystore en un lugar seguro: sin él no podrás publicar actualizaciones.
-
-Compilar en tu computadora (requiere Android Studio): `npm install && npm run android:apk`, o `npm run android:sync && npm run android:open`.
-
-**2. PWA.** Abre la URL de GitHub Pages en Chrome para Android → menú ⋮ → *Agregar a la pantalla principal*. Se abre como app y funciona sin conexión en modo demo.
+**PWA (opcional):** en Chrome para Android → menú ⋮ → *Agregar a la pantalla principal*.
 
 ## Conectar Supabase (producción)
 
@@ -105,13 +99,13 @@ supabase secrets set WHATSAPP_TOKEN=... WHATSAPP_PHONE_ID=... WHATSAPP_TEMPLATE=
 ```
 index.html, manifest.webmanifest, sw.js   app web + PWA
 icons/          íconos de la app
-android/        proyecto nativo Android (Capacitor)
-.github/        compilación automática del APK
-scripts/        build-web.mjs (copia la web a www/ para Capacitor)
+android/        app nativa Android (Java + WebView): MainActivity, Updater, ShareProvider
+.github/        apk.yml: compila, prueba y publica el APK
+dl/             APK publicado y version.json (lo genera GitHub Actions)
 css/app.css
 js/
   app.js          login, layout, router y roles
-  nativo.js       puente con Android (compartir archivos, botón atrás)
+  nativo.js       puente con la app Android (compartir, imprimir, botón atrás)
   db.js           capa de datos (demo/localStorage y Supabase) + bitácora
   reglas.js       reglas de negocio (triggers) por objeto y evento
   ui.js           formularios, modales y formatos

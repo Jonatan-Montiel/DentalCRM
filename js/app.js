@@ -2,7 +2,7 @@ import { db } from './db.js';
 import { sembrarDemo } from './seed.js';
 import { esc, toast, $, puede } from './ui.js';
 import { ROLES, etiqueta } from './catalogos.js';
-import { iniciarNativo } from './nativo.js';
+import { iniciarNativo, enlaceApk } from './nativo.js';
 
 const RUTAS = [
   { ruta: 'inicio', titulo: 'Inicio', ico: '📊', modulo: './vistas/dashboard.js', roles: ['admin', 'doctor', 'recepcion'] },
@@ -45,7 +45,8 @@ async function login() {
         <div class="campo completo"><label>Usuario</label><select name="u">${usuarios.map(u => `<option value="${u.id}">${esc(u.nombre)} · ${esc(etiqueta(ROLES, u.rol))}</option>`).join('')}</select></div>
         <div class="campo completo"><label>PIN</label><input name="pin" type="password" inputmode="numeric" autocomplete="current-password" placeholder="Demo: 1234 admin · 0000 recepción · 1111 doctor"></div>
         <button class="btn primario completo">Entrar</button>
-      </form></div></div>`;
+      </form><div id="apk" class="form-grid" style="margin-top:12px"></div></div></div>`;
+    enlaceApk().then(h => { const el = $('#apk'); if (el) el.innerHTML = h; });
     $('#flogin').onsubmit = (e) => {
       e.preventDefault();
       const u = usuarios.find(x => x.id === e.target.u.value);
@@ -59,7 +60,8 @@ async function login() {
         <div class="campo completo"><label>Correo</label><input name="email" type="email" required autocomplete="username"></div>
         <div class="campo completo"><label>Contraseña</label><input name="pass" type="password" required autocomplete="current-password"></div>
         <button class="btn primario completo">Entrar</button>
-      </form></div></div>`;
+      </form><div id="apk" class="form-grid" style="margin-top:12px"></div></div></div>`;
+    enlaceApk().then(h => { const el = $('#apk'); if (el) el.innerHTML = h; });
     $('#flogin').onsubmit = async (e) => {
       e.preventDefault();
       const { error } = await db.sb.auth.signInWithPassword({ email: e.target.email.value, password: e.target.pass.value });

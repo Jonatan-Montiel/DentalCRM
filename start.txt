@@ -1,0 +1,7 @@
+Starting: Intent { cmp=mx.dentalcrm.app/.MainActivity }
+Status: ok
+LaunchState: COLD
+Activity: mx.dentalcrm.app/.MainActivity
+TotalTime: 5048
+WaitTime: 5067
+Complete
